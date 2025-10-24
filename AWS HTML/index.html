@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CloudMail Newsletter Subscription</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f8fafc;
+    }
+    form {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    input[type="email"] {
+      padding: 10px;
+      width: 250px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1e3a8a;
+    }
+    /* Style for the response message */
+    #responseMsg {
+        margin-top: 10px;
+        font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <form id="subscribeForm">
+    <h2>Subscribe to CloudMail</h2>
+    <input type="email" id="email" placeholder="Enter your email" required value="dyuvaraj366@gmail.com" />
+    <br />
+    <button type="submit">Subscribe</button>
+    <p id="responseMsg"></p>
+  </form>
+
+  <script>
+    const form = document.getElementById('subscribeForm');
+    const msg = document.getElementById('responseMsg');
+
+    // **REPLACE THIS URL WITH YOUR DEPLOYED API GATEWAY ENDPOINT**
+    const API_URL = "https://3b0ecgvmml.execute-api.ap-southeast-2.amazonaws.com/prod/subscribe";
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+
+      msg.textContent = "Subscribing...";
+      msg.style.color = "gray";
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email })
+        });
+
+        // The API Gateway returns a 200 OK status even if the Lambda returns an error status code in its body
+        const data = await res.json(); 
+
+        // Check the Lambda's internal statusCode for the true result
+        if (res.status === 200 && data.statusCode && data.statusCode < 400) {
+            
+            // This is the true success path
+            const bodyData = JSON.parse(data.body);
+            msg.textContent = bodyData.message || "Subscription confirmed!";
+            msg.style.color = "green";
+            document.getElementById('email').value = ''; // Clear input on success
+
+        } else if (res.status === 200 && data.statusCode && data.statusCode >= 400) {
+            
+            // This handles the Lambda's internal 400 error (e.g., Email is required)
+            const bodyData = JSON.parse(data.body);
+            msg.textContent = bodyData.message || "Error processing request.";
+            msg.style.color = "orange";
+        
+        } else {
+            // General network failure or unhandled API Gateway error
+            msg.textContent = "Subscription failed due to an unknown API error.";
+            msg.style.color = "red";
+        }
+        
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        msg.textContent = "Subscription failed! (Check Console)";
+        msg.style.color = "red";
+      }
+    });
+  </script>
+</body>
+</html>
